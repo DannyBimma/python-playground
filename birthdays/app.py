@@ -9,6 +9,10 @@ app = Flask(__name__)
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
+# Set a secret key for session management (required for flash messages)
+# IMPORTANT: Change this to a strong, random secret in a real application!
+app.secret_key = "dev_secret_key"
+
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///birthdays.db")
 
@@ -41,3 +45,11 @@ def index():
         
         # Render birthdays page
         return render_template("index.html", birthdays=birthdays)
+
+
+@app.route("/delete/<int:birthday_id>", methods=["POST"])
+def delete_birthday(birthday_id):
+    """Delete a birthday entry."""
+    db.execute("DELETE FROM birthdays WHERE id = ?", birthday_id)
+    
+    return redirect("/")
