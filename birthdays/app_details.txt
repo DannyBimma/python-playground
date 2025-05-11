@@ -1,0 +1,11 @@
+When the "/" route is requested via GET, the web application should display, in a table, all of the people in the birthdays.db database along with their birthdays.
+
+In app.py, add logic to the GET request handling the query to the birthdays.db database for all birthdays. Pass all of that data to the index.html template.
+
+In index.html, add logic to render each birthday as a row in the table. Each row should have two columns: one column for the person’s name and another column for the person’s birthday.
+
+When the "/" route is requested via POST, the web application should add a new birthday to the database and then re-render the index page.
+
+In index.html, add an HTML form. The form should let users type in a name, a birthday month, and a birthday day. Be sure the form submits to "/" (its “action”) with a method of post.
+
+In app.py, add logic to the POST request handling to INSERT a new row into the birthdays table based on the data supplied by the user.
