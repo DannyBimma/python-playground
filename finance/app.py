@@ -222,4 +222,62 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
-    return apology("TODO")
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        symbol = request.form.get("symbol")
+        shares_str = request.form.get("shares")
+
+        if not symbol:
+            return apology("must select a symbol", 400)
+
+        if not shares_str:
+            return apology("must provide number of shares", 400)
+
+        try:
+            shares_to_sell = int(shares_str)
+            if shares_to_sell <= 0:
+                return apology("shares must be a positive integer", 400)
+        except ValueError:
+            return apology("shares must be a positive integer", 400)
+
+        # Check how many shares the user owns
+        owned_shares_rows = db.execute(
+            "SELECT SUM(shares) as total_shares FROM transactions WHERE user_id = ? AND symbol = ? GROUP BY symbol",
+            user_id,
+            symbol,
+        )
+
+        if not owned_shares_rows or owned_shares_rows[0]["total_shares"] < shares_to_sell:
+            return apology(f"you do not own enough shares of {symbol}", 400)
+
+        stock = lookup(symbol)
+        if not stock: # Should not happen if selected from owned stocks
+            return apology("invalid symbol", 400)
+
+        # Record sale (negative shares)
+        db.execute(
+            "INSERT INTO transactions (user_id, symbol, shares, price_per_share) VALUES (?, ?, ?, ?)",
+            user_id,
+            stock["symbol"],
+            -shares_to_sell, # Negative for selling
+            stock["price"],
+        )
+
+        # Update user's cash
+        user_cash_rows = db.execute("SELECT cash FROM users WHERE id = ?", user_id)
+        user_cash = user_cash_rows[0]["cash"]
+        sale_value = shares_to_sell * stock["price"]
+        updated_cash = user_cash + sale_value
+        db.execute("UPDATE users SET cash = ? WHERE id = ?", updated_cash, user_id)
+
+        flash(f"Sold {shares_to_sell} share(s) of {stock['symbol']}!")
+        return redirect("/")
+
+    else:
+        # GET request: stocks owned by the user to populate the dropdown
+        stocks_owned = db.execute(
+            "SELECT symbol, SUM(shares) as total_shares FROM transactions WHERE user_id = ? GROUP BY symbol HAVING total_shares > 0",
+            user_id,
+        )
+        return render_template("sell.html", stocks=stocks_owned)
