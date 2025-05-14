@@ -1,17 +1,15 @@
 import os
-
 from cs50 import SQL
 from flask import Flask, flash, jsonify, redirect, render_template, request, session
+
 
 # Configure application
 app = Flask(__name__)
 
+
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-# Set a secret key for session management (required for flash messages)
-# IMPORTANT: Change this to a strong, random secret in a real application!
-app.secret_key = "dev_secret_key"
 
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///birthdays.db")
@@ -23,6 +21,7 @@ def after_request(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Expires"] = 0
     response.headers["Pragma"] = "no-cache"
+
     return response
 
 
@@ -45,6 +44,7 @@ def index():
         
         # Render birthdays page
         return render_template("index.html", birthdays=birthdays)
+
 
 
 @app.route("/delete/<int:birthday_id>", methods=["POST"])
