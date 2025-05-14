@@ -21,6 +21,21 @@ Session(app)
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///finance.db")
 
+# Create transactions table if it doesn't exist
+db.execute("""
+    CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        symbol TEXT NOT NULL,
+        shares INTEGER NOT NULL,
+        price_per_share REAL NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+""")
+db.execute("CREATE INDEX IF NOT EXISTS user_id_idx ON transactions (user_id)")
+db.execute("CREATE INDEX IF NOT EXISTS symbol_idx ON transactions (symbol)")
+
 
 @app.after_request
 def after_request(response):
@@ -42,7 +57,54 @@ def index():
 @login_required
 def buy():
     """Buy shares of stock"""
-    return apology("TODO")
+    if request.method == "POST":
+        symbol = request.form.get("symbol")
+        shares_str = request.form.get("shares")
+
+        if not symbol:
+            return apology("must provide symbol", 400)
+
+        if not shares_str:
+            return apology("must provide number of shares", 400)
+
+        try:
+            shares = int(shares_str)
+            if shares <= 0:
+                return apology("shares must be a positive integer", 400)
+        except ValueError:
+            return apology("shares must be a positive integer", 400)
+
+        stock = lookup(symbol)
+        if not stock:
+            return apology("invalid symbol", 400)
+
+        user_id = session["user_id"]
+        user_cash_rows = db.execute("SELECT cash FROM users WHERE id = ?", user_id)
+        user_cash = user_cash_rows[0]["cash"]
+
+        total_cost = shares * stock["price"]
+
+        if user_cash < total_cost:
+            return apology("cannot afford shares", 400)
+
+        # Record the transaction
+        db.execute(
+            "INSERT INTO transactions (user_id, symbol, shares, price_per_share) VALUES (?, ?, ?, ?)",
+            user_id,
+            stock["symbol"],
+            shares,
+            stock["price"],
+        )
+
+        # Update user's cash
+        updated_cash = user_cash - total_cost
+        db.execute("UPDATE users SET cash = ? WHERE id = ?", updated_cash, user_id)
+
+        flash(f"Bought {shares} share(s) of {stock['symbol']}!")
+        return redirect("/")
+
+    else:  # GET request
+        return render_template("buy.html")
 
 
 @app.route("/history")
