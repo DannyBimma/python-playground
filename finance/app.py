@@ -248,7 +248,7 @@ def register():
             return apology("passwords do not match", 400)
 
         try:
-            hashed_password = generate_password_hash(password)
+            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
             db.execute(
                 "INSERT INTO users (username, hash) VALUES (?, ?)",
                 username,
